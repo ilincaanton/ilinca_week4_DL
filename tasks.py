@@ -29,8 +29,7 @@ import numpy as np
 text = "The quick brown fox jumps over the lazy dog!"
 
 # Write a list comprehension to tokenize the text and remove punctuation
-tokens = _ # Your code here
-
+tokens = [t.strip(".,!?") for t in text.split()]
 # Expected output: ['The', 'quick', 'brown', 'fox', 'jumps', 'over', 'the', 'lazy', 'dog']
 print(tokens)
 # -----------------------------------------------
@@ -45,9 +44,8 @@ print(tokens)
 # Your code here:
 # -----------------------------------------------
 def tokenize(string: str) -> list:
-    pass # Your code
-
-
+    tokens = [s.strip(".,!?").lower() for s in string.split()]
+    return sorted(set(tokens))
 # -----------------------------------------------
 
 
@@ -65,7 +63,6 @@ def tokenize(string: str) -> list:
 # create a dictionary where each word is a key and its frequency (count) is the value.
 
 
-
 # Task 3: Using the tokens list from the previous exercise, create a dictionary comprehension 
 #   that counts the frequency of each word.
 
@@ -74,7 +71,8 @@ def tokenize(string: str) -> list:
 
 # Your code here:
 # -----------------------------------------------
-word_frequencies = _ # Your code here
+tokens1 = [s.lower() for s in tokens]
+word_frequencies = {word: tokens1.count(word) for word in tokens1}
 
 # Expected output example: {'the': 2, 'quick': 1, ...}
 print(word_frequencies)
@@ -90,7 +88,9 @@ print(word_frequencies)
 # Your code here:
 # -----------------------------------------------
 def token_counts(string: str, k: int = 1) -> dict:
-    pass # Your code
+    tokens = [s.strip(".,!?").lower() for s in string.split()]
+    word_frequencies = {word: tokens.count(word) for word in tokens if tokens.count(word) > k}
+    return word_frequencies
 
 # test:
 text_hist = {'the': 2, 'quick': 1, 'brown': 1, 'fox': 1, 'jumps': 1, 'over': 1, 'lazy': 1, 'dog': 1}
@@ -121,7 +121,7 @@ all(text_hist[key] == value for key, value in token_counts(text).items())
 
 # Your code here:
 # -----------------------------------------------
-token_to_id = _ # Your code here
+token_to_id = {} # TODO: Task 4
 
 # Expected output: {'dog': 0, 'quick': 1, 'fox': 2, 'the': 3, 'over': 4, 'lazy': 5, 'brown': 6, 'jumps': 7}
 print(token_to_id)
