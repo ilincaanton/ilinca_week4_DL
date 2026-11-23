@@ -44,8 +44,9 @@ print(tokens)
 # Your code here:
 # -----------------------------------------------
 def tokenize(string: str) -> list:
-    tokens = [s.strip(".,!?").lower() for s in string.split()]
-    return sorted(set(tokens))
+    allowed = "abcdefghijklmnopqrstuvwxyz0123456789 \n\t"
+    cleaned = "".join([c for c in string.lower() if c in allowed])
+    return cleaned.split()
 # -----------------------------------------------
 
 
@@ -89,7 +90,7 @@ print(word_frequencies)
 # -----------------------------------------------
 def token_counts(string: str, k: int = 1) -> dict:
     tokens = [s.strip(".,!?").lower() for s in string.split()]
-    word_frequencies = {word: tokens.count(word) for word in tokens if tokens.count(word) > k}
+    word_frequencies = {word: tokens.count(word) for word in tokens if tokens.count(word) >= k}
     return word_frequencies
 
 # test:
@@ -121,7 +122,9 @@ all(text_hist[key] == value for key, value in token_counts(text).items())
 
 # Your code here:
 # -----------------------------------------------
-token_to_id = {} # TODO: Task 4
+tokens2 = set([s.lower() for s in tokens])
+token_to_id = {token: i for i, token in enumerate(tokens2)}
+id_to_token = {id: token for token, id in token_to_id.items()}
 
 # Expected output: {'dog': 0, 'quick': 1, 'fox': 2, 'the': 3, 'over': 4, 'lazy': 5, 'brown': 6, 'jumps': 7}
 print(token_to_id)
@@ -133,7 +136,7 @@ print(token_to_id)
 #
 # Your code here:
 # -----------------------------------------------
-id_to_token = _ # Your code here
+id_to_token = {id: token for token, id in token_to_id.items()}
 
 # tests: 
 # test 1
@@ -154,8 +157,19 @@ assert all(id_to_token[token_to_id[key]]==key for key in token_to_id) and all(to
 # Your code here:
 # -----------------------------------------------
 def make_vocabulary_map(documents: list) -> tuple:
-    # Hint: use your tokenize function
-    pass # Your code
+    words = []
+    for string in documents:
+        for word in string.lower().split():
+            w = word.strip(".,!?")
+            if w: 
+                words.append(w)
+    
+    tokens3 = sorted(set(words))
+    
+    t2i = {token: i for i, token in enumerate(tokens3)} 
+    i2t = {i: token for token, i in t2i.items()}
+    
+    return t2i, i2t
 
 # Test
 t2i, i2t = make_vocabulary_map([text])
@@ -173,9 +187,18 @@ all(i2t[t2i[tok]] == tok for tok in t2i) # should be True
 
 # Your code here:
 # -----------------------------------------------
-def tokenize_and_encode(documents: list) -> list:
-    # Hint: use your make_vocabulary_map and tokenize function
-    pass # Your code
+def tokenize_and_encode(documents: list) -> tuple:
+    
+    t2i, i2t = make_vocabulary_map(documents)
+
+    encoded_sentences = []
+    for string in documents:
+        string_k = tokenize(string)
+        string_k = [s for s in string_k if s]
+        encoded_sentences.append([t2i[s] for s in string_k])
+        
+    return encoded_sentences, t2i, i2t
+        
 
 # Test:
 enc, t2i, i2t = tokenize_and_encode([text, 'What a luck we had today!'])
@@ -201,7 +224,7 @@ enc, t2i, i2t = tokenize_and_encode([text, 'What a luck we had today!'])
 
 # Your code here:
 # -----------------------------------------------
-sigmoid = _ # Your code
+sigmoid = lambda x: (1 / (1 + np.exp(-x)))
 
 # Test:
 np.all(sigmoid(np.log([1, 1/3, 1/7])) == np.array([1/2, 1/4, 1/8]))
@@ -276,7 +299,22 @@ np.all(sigmoid(np.log([1, 1/3, 1/7])) == np.array([1/2, 1/4, 1/8]))
 # Your code here:
 # -----------------------------------------------
 def rnn_layer(w: np.array, list_of_sequences: list[np.array], sigma=sigmoid ) -> np.array:
-    pass # Your code
+    W = w[0:9].reshape(3, 3)
+    U = w[9:18].reshape(3, 3)
+    B = w[18:21]
+    
+    nr_sequences = len(list_of_sequences)
+    outputs = np.zeros(nr_sequences)
+
+    for i in range(nr_sequences):
+        X = list_of_sequences[i]
+        a = 0 * X[0, :]
+        for j in range(X.shape[0]):
+            a = W @ X[j, :] + U @ a
+        outputs[i] = B @ a
+
+    return outputs
+
 
 # Test
 np.random.seed(10)
@@ -311,7 +349,8 @@ o.shape == (100,) and o.mean().round(3) == 16.287 and o.std().astype(int) == 133
 # Your code here:
 # -----------------------------------------------
 def rnn_loss(w: np.array, list_of_sequences: list[np.array], y: np.array) -> np.float64:
-    pass # Your code
+    pred = rnn_layer(w, list_of_sequences)
+    return np.mean((y - pred) ** 2)
 
 # Test:
 y = np.array([(X @ np.arange(1,4))[0] for X in list_of_sequences])
@@ -328,27 +367,27 @@ o.size == 1 and o.round(3) == 17794.733
 # The data that we will fit is a macroeconomics data set. We'll try to predict inflation ('infl')
 # from the consumer price index ('cpi') and unemployment rate ('unemp').
 # First, load the data set:
-from statsmodels.datasets import macrodata
+# from statsmodels.datasets import macrodata
 
-data = macrodata.load_pandas().data
-X = np.hstack([np.ones((len(data),1)), data[['cpi','unemp']].values]) # Features: CPI and unemployment
-y = data['infl'].values # Target: inflation
+# data = macrodata.load_pandas().data
+# X = np.hstack([np.ones((len(data),1)), data[['cpi','unemp']].values]) # Features: CPI and unemployment
+# y = data['infl'].values # Target: inflation
 
 # Next we want to prepare a dataset for training sequence-based models like RNNs. We create 
 # input-output pairs where each input is a sequence of seq_len time steps from X, and the output 
 # is the corresponding target value y at the next time step after the sequence.
 
-seq_len = 7 # Define the length of each input sequence (we choose 7 consecutive time steps).
+# seq_len = 7 # Define the length of each input sequence (we choose 7 consecutive time steps).
 
 # Create a list of tuples:
-data_pairs = [(X[i:i+seq_len], y[i+seq_len]) for i in range(len(X)-seq_len)]
+# data_pairs = [(X[i:i+seq_len], y[i+seq_len]) for i in range(len(X)-seq_len)]
 # - First element: a slice of `X` of length `seq_len` (the input sequence).
 # - Second element: the target value `y` corresponding to the step after the sequence.
 # Example: If seq_len=4, for i=0, pair is (X[0:4], y[4]).
 
 # We need the input sequences and target values in a separate list. A trick to do this is this:
 
-list_of_sequences, yy = list(zip(*data_pairs))
+# list_of_sequences, yy = list(zip(*data_pairs))
 
 # Here, the zip(*...) is used for transposing a list of tuples. It splits the tuple pairs into 
 # two separate lists:
@@ -360,36 +399,36 @@ list_of_sequences, yy = list(zip(*data_pairs))
 # Now we are ready to fit the RNN to the data set. We need to load the optimization routine 
 # 'minimize' from the scipy.optimize module
 
-from scipy.optimize import minimize
+# from scipy.optimize import minimize
 
 # fit the RNN (this may take a minute)
-fit = minimize(rnn_loss, wstart, args=(list_of_sequences, yy), method='BFGS')
-print(fit)
+# fit = minimize(rnn_loss, wstart, args=(list_of_sequences, yy), method='BFGS')
+# print(fit)
 
 # The 'success' component in fit may be false, and this is due to a loss of computational 
 # precision. For now we'll just settle for the weights it has found so far. 
 
 # To evaluate the fit we can compute the correlation between the values predicted by the
 # RNN and the true values
-pred = rnn_layer(fit['x'], list_of_sequences)
-np.corrcoef(pred,yy)
+# pred = rnn_layer(fit['x'], list_of_sequences)
+# np.corrcoef(pred,yy)
 
 # How good is this? To gage the performance of the RNN we'll compare it to a linear 
 # regression with the same data
-Z = X[:len(yy)] # features corresponding to elements in yy at the previous time step
-linreg_coefs = np.linalg.lstsq(Z, yy, rcond=None)[0] # rcond=None suppresses warning message
-linreg_pred = Z @ linreg_coefs
-np.corrcoef(linreg_pred, yy)
+# Z = X[:len(yy)] # features corresponding to elements in yy at the previous time step
+# linreg_coefs = np.linalg.lstsq(Z, yy, rcond=None)[0] # rcond=None suppresses warning message
+# linreg_pred = Z @ linreg_coefs
+# np.corrcoef(linreg_pred, yy)
 
 # The correlation of the RNN predicted values is substantially higher! But it also has
 # many more parameters, and so is more flexible. 
 
 # To visualize the difference in performance we plot the true values and predicted values
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-plt.plot(yy)
-plt.plot(pred)
-plt.plot(linreg_pred)
-plt.legend(['Truth','RNN','LinReg'])
+# plt.plot(yy)
+# plt.plot(pred)
+# plt.plot(linreg_pred)
+# plt.legend(['Truth','RNN','LinReg'])
 
 
